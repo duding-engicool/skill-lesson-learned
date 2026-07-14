@@ -1,6 +1,6 @@
 # 经验教训（LL）结构化沉淀（lesson-learned）
 
-> 面向质量/项目工程师的混合式双版技能。对经验教训做结构化捕获、分类与检索沉淀，避免经验散失，输出 LL 沉淀模板与知识库索引（Markdown + HTML 双版）。
+> 面向质量/项目工程师的结构化沉淀技能。对经验教训做结构化捕获、分类与检索沉淀，避免经验散失，输出 LL 沉淀模板与知识库索引（纯文字版 .txt + Markdown .md）。
 
 ## 适用角色
 
@@ -12,7 +12,7 @@
 1. 按 LL 字段模型**结构化捕获**：背景 / 现象 / 分类 / 根因 / 措施 / 责任人 / 状态 / 标签。
 2. **分类**为设计/工艺/供应链/测试/管理等，并判定正负向与严重度。
 3. 自动生成**可检索索引**（按类别、按标签、按根因类型）。
-4. 一键产出双版本：`经验教训库.md` 与 `经验教训库.html`（主色 #C8102E）。
+4. 一键产出双文件：`经验教训库.md` 与 `经验教训库.txt`（纯文字版）。
 
 ## 目录结构
 
@@ -22,15 +22,15 @@ lesson-learned/
 ├── README.md
 ├── references/
 └── scripts/
-    └── build_report.py     # 双版报告生成器（含内置小样本）
+    └── build_report.py     # txt+md 报告生成器（含内置小样本）
 ```
 
 ## 快速使用
 
 ```bash
 python scripts/build_report.py --demo
-python scripts/build_report.py --input result.json \
-    --md-out 经验教训库.md --html-out 经验教训库.html
+python scripts/build_report.py --input result.json --out-dir ./out
+# 默认输出：经验教训库_*.md + 经验教训库_*.txt（日期命名）
 ```
 
 ## 与案例类技能的区别

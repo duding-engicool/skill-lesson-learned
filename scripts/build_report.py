@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 经验教训（LL）知识库报告生成器
-读入结构化结果 JSON，生成 MD 文档 + 网页版 HTML（双版）。主色 #C8102E。
+读入结构化结果 JSON，生成纯文字版 .txt + Markdown .md（双文件、无网页版）。
 
 用法：
-  python build_report.py --input result.json --md-out report.md --html-out report.html
-  python build_report.py --demo            # 使用内置小样本
+  python build_report.py --input result.json --out-dir ./out
+  python build_report.py --out-dir ./out          # 使用内置小样本
 
 输入 JSON 结构：
 {
@@ -33,28 +33,18 @@
 }
 索引（按类别/标签）由脚本自动从 lessons 生成。
 """
+
 import argparse
 import json
+import os
 import sys
-import html
-from datetime import datetime
 from collections import defaultdict
+from datetime import date
 
-PRIMARY = "#C8102E"
-
-NATURE_COLOR = {
-    "正面经验": "#16a34a",
-    "负面教训": "#C8102E",
+NATURE_LABEL = {
+    "正面经验": "正面经验",
+    "负面教训": "负面教训",
 }
-SEVERITY_COLOR = {
-    "高": "#C8102E",
-    "中": "#ea580c",
-    "低": "#2563eb",
-}
-
-
-def esc(s):
-    return html.escape(str(s), quote=True)
 
 
 def load_result(path):
@@ -70,6 +60,11 @@ def build_index(lessons):
         for t in L.get("tags", []) or []:
             by_tag[t].append(L.get("id", ""))
     return by_cat, by_tag
+
+
+def field(L, k):
+    v = L.get(k, "")
+    return v if v not in (None, "", []) else "待企业补充"
 
 
 def build_md(r):
@@ -92,83 +87,68 @@ def build_md(r):
     out.append("")
     out.append("## 三、经验教训条目\n")
     for L in lessons:
-        out.append(f"### {L.get('id','')} 〔{L.get('nature','')}〕\n")
-        out.append(f"- 来源：{L.get('source','待企业补充')} ｜ 日期：{L.get('date','待企业补充')}")
-        out.append(f"- 类别：{L.get('category','待企业补充')} ｜ 严重度：{L.get('severity','待企业补充')} ｜ 状态：{L.get('status','待企业补充')}")
-        out.append(f"- 背景：{L.get('background','待企业补充')}")
-        out.append(f"- 现象：{L.get('phenomenon','待企业补充')}")
-        out.append(f"- 根因：{L.get('root_cause','待企业补充')}")
-        out.append(f"- 纠正措施：{L.get('corrective','待企业补充')}")
-        out.append(f"- 预防措施：{L.get('preventive','待企业补充')}")
-        out.append(f"- 责任人：{L.get('owner','待企业补充')} ｜ 标签：{', '.join(L.get('tags',[]) or []) or '待企业补充'}")
+        out.append(f"### {field(L,'id')} 〔{field(L,'nature')}〕\n")
+        out.append(f"- 来源：{field(L,'source')} ｜ 日期：{field(L,'date')}")
+        out.append(f"- 类别：{field(L,'category')} ｜ 严重度：{field(L,'severity')} ｜ 状态：{field(L,'status')}")
+        out.append(f"- 背景：{field(L,'background')}")
+        out.append(f"- 现象：{field(L,'phenomenon')}")
+        out.append(f"- 根因：{field(L,'root_cause')}")
+        out.append(f"- 纠正措施：{field(L,'corrective')}")
+        out.append(f"- 预防措施：{field(L,'preventive')}")
+        tags = field(L, 'tags')
+        tags_s = ', '.join(tags) if isinstance(tags, list) else tags
+        out.append(f"- 责任人：{field(L,'owner')} ｜ 标签：{tags_s}")
         out.append("")
-    out.append(f"> 报告生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')} ｜ 主色 {PRIMARY}")
+    out.append(f"> 报告生成时间：{date.today().strftime('%Y-%m-%d')} ｜ 输出：纯文字版(.txt) + Markdown(.md)")
     return "\n".join(out)
 
 
-CSS = """
-:root{--primary:#C8102E;--bg:#f8fafc;--card:#ffffff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;padding:32px}
-.wrap{max-width:1080px;margin:0 auto}
-header{text-align:center;padding:28px 0 18px;border-bottom:3px solid var(--primary);margin-bottom:28px}
-header h1{font-size:26px;letter-spacing:1px;color:var(--primary)}
-header .meta{color:var(--muted);font-size:14px;margin-top:10px}
-.sec{background:var(--card);border-radius:14px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,.06);margin-bottom:28px}
-.sec h2{font-size:21px;margin-bottom:16px;border-left:5px solid var(--primary);padding-left:12px}
-.lcard{border:1px solid var(--line);border-left:5px solid var(--primary);border-radius:10px;padding:16px;margin-bottom:16px}
-.lcard h3{font-size:17px;margin-bottom:8px}
-.kv{font-size:14px;margin:4px 0}
-.badge{display:inline-block;color:#fff;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:700;margin-right:6px}
-.idx{font-size:14px;line-height:2}
-.tag{display:inline-block;background:#fef2f2;color:var(--primary);border-radius:14px;padding:2px 10px;font-size:12px;margin:2px}
-footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px}
-"""
-
-
-def build_html(r):
+def build_txt(r):
     lessons = r.get("lessons", []) or []
     by_cat, by_tag = build_index(lessons)
+    L = []
+    L.append("=" * 72)
+    L.append(f"经验教训知识库 · {r.get('title','经验教训知识库')}")
+    L.append("=" * 72)
+    L.append("")
+    L.append(f"知识库负责人：{r.get('owner','') or '待企业补充'}")
+    L.append(f"条目总数    ：{len(lessons)}")
+    L.append("")
 
-    cards = []
-    for L in lessons:
-        nat = L.get("nature", "待企业补充")
-        nat_color = NATURE_COLOR.get(nat, "#64748b")
-        sev = L.get("severity", "待企业补充")
-        sev_color = SEVERITY_COLOR.get(sev, "#64748b")
-        tags = "".join(f'<span class="tag">{esc(t)}</span>' for t in L.get("tags", []) or [])
-        cards.append(
-            f'<div class="lcard"><h3>{esc(L.get("id",""))} '
-            f'<span class="badge" style="background:{nat_color}">{esc(nat)}</span>'
-            f'<span class="badge" style="background:{sev_color}">严重度 {esc(sev)}</span></h3>'
-            f'<div class="kv"><b>来源：</b>{esc(L.get("source","待企业补充"))} ｜ <b>日期：</b>{esc(L.get("date","待企业补充"))}'
-            f' ｜ <b>类别：</b>{esc(L.get("category","待企业补充"))} ｜ <b>状态：</b>{esc(L.get("status","待企业补充"))}</div>'
-            f'<div class="kv"><b>背景：</b>{esc(L.get("background","待企业补充"))}</div>'
-            f'<div class="kv"><b>现象：</b>{esc(L.get("phenomenon","待企业补充"))}</div>'
-            f'<div class="kv"><b>根因：</b>{esc(L.get("root_cause","待企业补充"))}</div>'
-            f'<div class="kv"><b>纠正：</b>{esc(L.get("corrective","待企业补充"))}</div>'
-            f'<div class="kv"><b>预防：</b>{esc(L.get("preventive","待企业补充"))}</div>'
-            f'<div class="kv"><b>责任人：</b>{esc(L.get("owner","待企业补充"))}</div>'
-            f'<div class="kv"><b>标签：</b>{tags or "待企业补充"}</div></div>'
-        )
-    cards_html = "".join(cards) if cards else '<p style="color:#64748b">（暂无 LL 条目，待企业补充）</p>'
+    # 一、知识库索引
+    L.append("-" * 72)
+    L.append("一、知识库索引")
+    L.append("-" * 72)
+    L.append("  按类别：")
+    for cat, ids in by_cat.items():
+        L.append(f"    {cat}：{', '.join(ids)}")
+    L.append("  按标签：")
+    for tag, ids in by_tag.items():
+        L.append(f"    {tag}：{', '.join(ids)}")
+    L.append("")
 
-    cat_html = "".join(f'<span class="tag">{esc(c)}：{esc(", ".join(ids))}</span>' for c, ids in by_cat.items()) or "（暂无）"
-    tag_html = "".join(f'<span class="tag">{esc(t)}：{esc(", ".join(ids))}</span>' for t, ids in by_tag.items()) or "（暂无）"
+    # 二、经验教训条目
+    L.append("-" * 72)
+    L.append("二、经验教训条目")
+    L.append("-" * 72)
+    for item in lessons:
+        L.append(f"  {field(item,'id')} 〔{field(item,'nature')}〕")
+        L.append(f"    来源    ：{field(item,'source')} ｜ 日期：{field(item,'date')}")
+        L.append(f"    类别    ：{field(item,'category')} ｜ 严重度：{field(item,'severity')} ｜ 状态：{field(item,'status')}")
+        L.append(f"    背景    ：{field(item,'background')}")
+        L.append(f"    现象    ：{field(item,'phenomenon')}")
+        L.append(f"    根因    ：{field(item,'root_cause')}")
+        L.append(f"    纠正措施：{field(item,'corrective')}")
+        L.append(f"    预防措施：{field(item,'preventive')}")
+        tags = field(item, 'tags')
+        tags_s = ', '.join(tags) if isinstance(tags, list) else tags
+        L.append(f"    责任人  ：{field(item,'owner')} ｜ 标签：{tags_s}")
+        L.append("")
 
-    return (
-        "<!DOCTYPE html><html lang='zh-CN'><head><meta charset='utf-8'>"
-        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-        f"<title>{esc(r.get('title','经验教训知识库'))}</title>"
-        f"<style>{CSS}</style></head><body><div class='wrap'>"
-        f"<header><h1>{esc(r.get('title','经验教训知识库'))}</h1>"
-        f"<div class='meta'>负责人：{esc(r.get('owner','') or '待企业补充')} ｜ 条目数：{len(lessons)}</div></header>"
-        "<section class='sec'><h2>知识库索引</h2>"
-        f"<div class='idx'><b>按类别：</b><br>{cat_html}<br><br><b>按标签：</b><br>{tag_html}</div></section>"
-        "<section class='sec'><h2>经验教训条目</h2>" + cards_html + "</section>"
-        f"<footer>本报告由 经验教训（LL）结构化沉淀 生成 · {datetime.now().strftime('%Y-%m-%d %H:%M')} · 主色 {PRIMARY}</footer>"
-        "</div></body></html>"
-    )
+    L.append("-" * 72)
+    L.append(f"报告生成时间：{date.today().strftime('%Y-%m-%d')} ｜ 输出：纯文字版(.txt) + Markdown(.md)")
+    L.append("")
+    return "\n".join(L)
 
 
 SAMPLE = {
@@ -210,31 +190,43 @@ SAMPLE = {
 
 
 def main():
-    ap = argparse.ArgumentParser(description="经验教训知识库报告生成器")
-    ap.add_argument("--input", help="结构化结果 JSON 路径")
-    ap.add_argument("--md-out", default="demo_ll.md", help="输出 MD 路径")
-    ap.add_argument("--html-out", default="demo_ll.html", help="输出 HTML 路径")
-    ap.add_argument("--demo", action="store_true", help="使用内置小样本生成演示报告")
+    ap = argparse.ArgumentParser(description="经验教训知识库报告生成器（txt + md）")
+    ap.add_argument("--input", help="结构化结果 JSON 路径（缺省使用内置小样本）")
+    ap.add_argument("--out-dir", default=os.getcwd(), help="输出目录（默认当前工作目录）")
+    ap.add_argument("--format", choices=["txt", "md", "all"], default="all",
+                    help="输出格式：txt / md / all（默认 all = txt + md）")
     args = ap.parse_args()
 
-    if args.demo:
-        r = SAMPLE
-    elif args.input:
+    if args.input:
         try:
             r = load_result(args.input)
         except Exception as e:
             sys.stderr.write(f"读取输入失败：{e}\n")
             sys.exit(1)
     else:
-        sys.stderr.write("请使用 --input <json> 或 --demo。\n")
-        sys.exit(1)
+        r = SAMPLE
+        print("ℹ️ 未提供 --input，使用内置小样本数据。")
 
-    with open(args.md_out, "w", encoding="utf-8") as f:
-        f.write(build_md(r))
-    sys.stderr.write(f"MD 已生成：{args.md_out}\n")
-    with open(args.html_out, "w", encoding="utf-8") as f:
-        f.write(build_html(r))
-    sys.stderr.write(f"HTML 已生成：{args.html_out}\n")
+    title = str(r.get("title", "经验教训知识库")).replace("/", "-")
+    date_str = date.today().strftime("%Y%m%d")
+    base = f"经验教训库_{title}_{date_str}"
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    if args.format in ("md", "all"):
+        md = build_md(r)
+        md_path = os.path.join(args.out_dir, base + ".md")
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(md)
+        print(f"✅ MD : {md_path}")
+
+    if args.format in ("txt", "all"):
+        txt = build_txt(r)
+        txt_path = os.path.join(args.out_dir, base + ".txt")
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write(txt)
+        print(f"✅ TXT: {txt_path}")
+
+    print(f"   条目数：{len(r.get('lessons', []) or [])}")
 
 
 if __name__ == "__main__":
